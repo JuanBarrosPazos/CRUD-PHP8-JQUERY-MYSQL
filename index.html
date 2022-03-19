@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplicacion Web con bbdd</title>
+    
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/datatables.min.css">
+
+    <script src="js/jquery-3.6.0.min.js"></script>
+    <script src="js/popper.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/datatables.min.js"></script>
+
+</head>
+<body>
+    <div class="container">
+        <h1>Lista de Artículos</h1>
+        <div class="row">
+            <div class="col-12">
+                <table class="table table-striped table-bordered table-hover" id="tablaarticulos">
+                    <thead>
+                        <tr>
+                            <td>ID</td>
+                            <td>CODE</td>
+                            <td>NOMBRE</td>
+                            <td>PRECIO</td>
+                            <td>MODIFICAR</td>
+                            <td>ELIMINAR</td>
+                        </tr>
+                    </thead>
+                </table>
+                <button class="btn btn-sm btn-primary" id="btnAgregar">AGREGAR ARTICULO!</button>
+            </div> <!-- FIN COL-12 -->
+        </div> <!-- FIN ROW -->
+    </div> <!-- FIN CONTAINER -->
+
+    <!-- FORMULARIO PARA AGREGAR O MODIFICAR -->
+    <diV class="modal fade" id="formularioArticulo" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <button type="button" class="close btn-close" name="button" data-bs-dismiss="modal" >
+                        
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" id="id">
+                    <div class="form-row">
+                        <div class="form-group col-md-12">
+                            <label>Code:</label>
+                            <input type="text" id="code" class="form-control" placeholder="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-12">
+                            <label>Nombre:</label>
+                            <input type="text" id="nombre" class="form-control" placeholder="">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group col-md-12">
+                            <label>Precio:</label>
+                            <input type="number" id="precio" class="form-control" placeholder="">
+                        </div>
+                    </div>
+               </div> <!-- FIN MODAL BODY-->
+                    <div class="modal-footer">
+                        <button type="button" id="confirmarAgregar" class="btn btn-success">Agregar</button>
+                        <button type="button" id="confirmarModificar" class="btn btn-success">Modificar</button>
+                        <button type="button" class="btn btn-success" data-bs-dismiss="modal">Cancelar</button>
+                    </div>
+            </div> <!-- FIN MODAL CONTENT-->
+        </div>
+    </diV> <!-- FIN MODAL FADE -->
+    <!-- FIN FORMULARIO AGREGAR O MODIFIVAR -->
+
+    <script>
+
+        // CONSTRUCTOR DE LA TABLA DE RESULTADOS
+        let tabla1 = $("#tablaarticulos").DataTable({
+            "ajax":{
+                url: "datos.php?accion=listar",
+                dataSrc: ""
+            },
+            "columns": [
+                {"data": "id"},
+                {"data": "code"},                
+                {"data": "nombre"},                
+                {"data": "precio"},                
+                {"data": null, "orderable": false},                
+                {"data": null, "orderable": false}               
+                ],
+                "columnDefs": [{
+                    targets: 4,
+                    "defaultContent": "<button class='btn btn-sm btn-primary botonmodificar' id='btnAgregar'>MODIFICAR</button>",
+                    data: null
+                },
+                {
+                    targets: 5,
+                        "defaultContent": "<button class='btn btn-sm btn-primary botonborrar' id='btnAgregar'>BORRAR</button>",
+                        data: null
+                }],
+                "language":{
+                    "url": "DataTables/spanish.json",
+                    },
+                        });
+            
+            // EVENTOS DE BOTONES
+
+                $('#btnAgregar').click(function(){
+                    $('#confirmarAgregar').show();
+                    $('#confirmarModificar').hide();
+                    limpiarFormulario();
+                    $('#formularioArticulo').modal('show');
+                });
+
+                $('#confirmarAgregar').click(function(){
+                    //$('#formularioArticulo').modal('hide');
+                    let registro = recuperarDatosFormulario();
+                    if(registro.code==''){
+                        alert("CODE ES OBLIGATORIO");
+                        return;
+                    }
+                    else if(registro.nombre==''){
+                        alert("NOMBRE ES OBLIGATORIO");
+                        return;
+                    }else if(registro.precio==''){
+                        alert("PRECION ES OBLIGATORIO");
+                        return;
+                    }else{
+                        $('#formularioArticulo').modal('hide');
+                        agregarRegistro(registro);
+                    }
+                    //console.log(registro); 
+                    //agregarRegistro(registro);
+                });
+
+                $('#confirmarModificar').click(function(){
+                    //$('#formularioArticulo').modal('hide');
+                    let registro = recuperarDatosFormulario();
+                    //console.log(registro);
+                    if(registro.code==''){
+                        alert("CODE ES OBLIGATORIO");
+                        return;
+                    }else if(registro.nombre==''){
+                        alert("NOMBRE ES OBLIGATORIO");
+                        return;
+                    }else if(registro.precio==''){
+                        alert("PRECIO ES OBLIGATORIO");
+                        return;
+                    }else{
+                        $('#formularioArticulo').modal('hide');
+                        modificarRegistro(registro);
+                    }
+                    //modificarRegistro(registro);
+                });
+
+                $('#tablaarticulos tbody').on('click', "button.botonmodificar", function(){
+                    //alert("HOLA DISTE CLICK EN MODIFICAR"); 
+                    $('#confirmarModificar').show();
+                    $('#confirmarAgregar').hide();  
+                    // IDENTIFICAMOS EL ARTICULO EN EL QUE ESTAMOS EN LA TABLA                  
+                    let registro = tabla1.row($(this).parents('tr')).data();
+                    recuperarRegistro(registro.id);
+                });
+
+                $('#tablaarticulos tbody').on('click', "button.botonborrar", function(){
+                    if(confirm("CONFIRME BORRAR EL REGISTRO!!!")){
+                        // IDENTIFICAMOS EL ARTICULO EN EL QUE ESTAMOS EN LA TABLA 
+                        let registro = tabla1.row($(this).parents('tr')).data();
+                        borrarRegistro(registro.id);
+                    }
+                });
+
+            // FIN EVENTOS DE BOTONES
+
+            // FUNCIONES QUE INTERACTUAN CON FORMULARIO ENTRADA DATOS
+
+                function limpiarFormulario(){
+                    $('#id').val('');
+                    $('#code').val('');
+                    $('#nombre').val('');
+                    $('#precio').val('');
+                }
+
+                function recuperarDatosFormulario(){
+                    let registro = {
+                        id: $('#id').val(),
+                        code: $('#code').val(),
+                        nombre: $('#nombre').val(),
+                        precio: $('#precio').val()
+                    };
+                    return registro;
+                }
+
+            // FIN FUNCIONES QUE INTERACTUAN CON FORMULARIO ENTRADA DATOS
+
+            // FUNCIONES QUE SE COMUNICAN CON EL SERVER A TRAVES DE AJAX
+
+                function agregarRegistro(registro){
+                    $.ajax({
+                        type: 'POST',
+                        url: "datos.php?accion=agregar",
+                        data: registro,
+                        success: function(msg){
+                            tabla1.ajax.reload();
+                        },
+                        error: function(){
+                            alert("Hubo un problema al agregar el registro");
+                        }
+                    });
+                }
+
+                function borrarRegistro(id){
+                    $.ajax({
+                        type: 'GET',
+                        url: "datos.php?accion=borrar&id="+id,
+                        data: '',
+                        success: function(msg){
+                            tabla1.ajax.reload();
+                        },
+                        error: function(){
+                            alert("Hubo un problema al borrar le registro!!");
+                        }
+                    });
+                }
+
+                function recuperarRegistro(id){
+                    $.ajax({
+                        type: 'GET',
+                        url: "datos.php?accion=consultar&id="+id,
+                        data: '',
+                        success: function (datos) {
+                            $('#id').val(datos[0].id);
+                            $('#code').val(datos[0].code);
+                            $('#nombre').val(datos[0].nombre);
+                            $('#precio').val(datos[0].precio);
+
+                            $("#formularioArticulo").modal('show');
+                        },
+                        error: function () {
+                            alert("ERROR AL RECUPERAR LOS DATOS");
+                        }
+                    });
+                }
+
+                function modificarRegistro(registro){
+                    $.ajax({
+                        type: 'POST',
+                        url: "datos.php?accion=modificar&id="+registro.id,
+                        data: registro,
+                        success: function (msg) {
+                            tabla1.ajax.reload();
+                        },
+                        error: function() {
+                          alert("EL REGISTRO NO SE HA MODIFICADO CORRECTAMENTE");
+                        }
+                    });
+                }
+
+            // FIN FUNCIONES COMUNICAN SERVER AJAX
+
+    </script>
+</body>
+</html>
